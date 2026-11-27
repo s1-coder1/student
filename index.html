@@ -281,7 +281,7 @@
   <script>
     const STORAGE_KEY = "student_registry_state_v1";
     const fundingLabels = { contract: "Контракт", "super-contract": "Супер-контракт", grant: "Грант" };
-    const roleLabels = { main: "Главный администратор", admin: "Администратор", tutor: "Тьютор", qalqon: "Qalqon", user: "Пользователь" };
+    const roleLabels = { main_admin: "Главный администратор", main: "Главный администратор", admin: "Администратор", tutor: "Тьютор", qalqon: "Qalqon", user: "Пользователь" };
 
     const defaultState = {
       currentUserId: null,
@@ -290,9 +290,9 @@
       theme: "light",
       lang: "ru",
       users: [
-        { id: "u-admin", fullName: "Администратор Системы", username: "admin", password: "Password123", role: "main", assignedGroups: [] },
-        { id: "u-tutor", fullName: "Каримов Азиз", username: "tutor1", password: "Password123", role: "tutor", assignedGroups: ["ИТ-101"] },
-        { id: "u-qalqon", fullName: "Наряд Qalqon", username: "qalqon1", password: "Password123", role: "qalqon", assignedGroups: [] }
+        { id: "u-admin", fullName: "Administrator admin", username: "admin", password: "Password123", role: "main_admin", accountType: "qalqon", assignedGroups: [] },
+        { id: "u-tutor", fullName: "Каримов Азиз", username: "tutor1", password: "Password123", role: "tutor", accountType: "tutor", assignedGroups: ["ИТ-101"] },
+        { id: "u-qalqon", fullName: "Наряд Qalqon", username: "qalqon1", password: "Password123", role: "qalqon", accountType: "qalqon", assignedGroups: [] }
       ],
       faculties: [
         { id: "f-it", name: "Факультет информационных технологий", groups: ["ИТ-101", "ИТ-102"] },
@@ -356,6 +356,14 @@
       return state.users.find((u) => u.id === state.currentUserId) || null;
     }
 
+    function isMainAdmin(user) {
+      return user?.role === "main_admin" || user?.role === "main";
+    }
+
+    function isAnyAdmin(user) {
+      return isMainAdmin(user) || user?.role === "admin";
+    }
+
     function applyThemeAndLang() {
       document.documentElement.classList.toggle("theme-dark", state.theme === "dark");
       $("themeToggle").textContent = state.theme === "dark" ? "☀" : "☾";
@@ -402,21 +410,21 @@
     function renderApp() {
       const user = getCurrentUser();
       if (!user) return;
-      const isMain = user.role === "main";
+      const mainAdm = isMainAdmin(user);
       const isTutor = user.role === "tutor";
 
       $("currentUserName").textContent = user.fullName;
       $("currentUserRole").textContent = roleLabels[user.role] || user.role;
       $("currentUserInitial").textContent = (user.fullName || "У").trim().charAt(0).toUpperCase();
 
-      $("tutorTab").hidden = !isTutor && !isMain;
-      $("usersTab").hidden = !isMain;
+      $("tutorTab").hidden = !isTutor && !mainAdm;
+      $("usersTab").hidden = !mainAdm;
       $("addStudent").hidden = user.role === "qalqon";
       $("addFaculty").hidden = user.role === "qalqon";
 
       const allowedViews = ["studentsView", "facultiesView", "violationsView"];
-      if (isTutor || isMain) allowedViews.push("tutorView");
-      if (isMain) allowedViews.push("usersView");
+      if (isTutor || mainAdm) allowedViews.push("tutorView");
+      if (mainAdm) allowedViews.push("usersView");
       if (!allowedViews.includes(state.activeView)) state.activeView = "studentsView";
 
       switchView(state.activeView);
@@ -584,7 +592,8 @@
     function renderUsers() {
       const allGroups = state.faculties.flatMap((f) => f.groups);
       $("usersList").innerHTML = state.users.map((u) => {
-        const badgeClass = u.role === "main" ? "role-badge main" : u.role === "admin" ? "role-badge admin" : "role-badge";
+        const mainAdm = isMainAdmin(u);
+        const badgeClass = mainAdm ? "role-badge main" : u.role === "admin" ? "role-badge admin" : "role-badge";
         const assigned = Array.isArray(u.assignedGroups) ? u.assignedGroups : [];
         return `
           <article class="user-card">
@@ -598,7 +607,7 @@
                   <option value="tutor" ${u.role === "tutor" ? "selected" : ""}>Тьютор</option>
                   <option value="qalqon" ${u.role === "qalqon" ? "selected" : ""}>Qalqon</option>
                   <option value="admin" ${u.role === "admin" ? "selected" : ""}>Администратор</option>
-                  <option value="main" ${u.role === "main" ? "selected" : ""}>Главный админ</option>
+                  <option value="main_admin" ${mainAdm ? "selected" : ""}>Главный админ</option>
                 </select>
                 <button class="small-btn" type="button" onclick="openPasswordModal('${u.id}')">Пароль</button>
                 ${u.id !== state.currentUserId ? `<button class="small-btn danger" type="button" onclick="deleteUser('${u.id}')">Удалить</button>` : ""}
@@ -661,7 +670,7 @@
     function renderTutorView() {
       const user = getCurrentUser();
       const allGroups = state.faculties.flatMap((f) => f.groups);
-      const groups = user?.role === "main" ? allGroups : (user?.assignedGroups || []);
+      const groups = isMainAdmin(user) ? allGroups : (user?.assignedGroups || []);
 
       if (selectedTutorGroup && groups.includes(selectedTutorGroup)) {
         $("tutorGroupsPanel").hidden = true;
@@ -747,7 +756,7 @@
 
     function renderViolations() {
       const user = getCurrentUser();
-      const isAdmin = user?.role === "main" || user?.role === "admin";
+      const isAdmin = isAnyAdmin(user);
       $("adminViolationStudents").hidden = !isAdmin;
 
       if (!editingViolationId) {
@@ -904,6 +913,7 @@
           username,
           password,
           role,
+          accountType: role,
           assignedGroups: []
         };
         state.users.push(newUser);
