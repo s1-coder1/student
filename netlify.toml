@@ -1,3 +1,8 @@
 [build]
   command = "python scripts/build_netlify.py"
   publish = "dist"
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://student-registry-api.onrender.com/api/:splat"
+  status = 200

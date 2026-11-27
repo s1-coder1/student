@@ -42,7 +42,7 @@ Netlify faqat interfeysni joylaydi. Python API Render’da ishlaydi, PostgreSQL 
 1. Supabase loyihasi yarating va **Session pooler** PostgreSQL connection string’ini oling.
 2. Kodni `registry.db` faylisiz private GitLab repository’ga joylang. `.gitignore` bazani, `.env` fayllarni va lokal `output/` build katalogini commitdan chiqaradi.
 3. Netlify’da ishlatmoqchi bo‘lgan sayt nomini oldindan tanlang. Render’da GitLab repository’sidan Blueprint yarating (`render.yaml`); `DATABASE_URL` uchun Supabase connection string’ini, `ALLOWED_ORIGINS` uchun tanlangan Netlify origin’ini kiriting (`https://sayt-nomi.netlify.app`).
-4. Render service URL’ini oling. Netlify’da shu repository’ni ulang va build environment’ga `RENDER_EXTERNAL_URL` nomi bilan Render URL’ini kiriting. Build sozlamalari `netlify.toml` orqali o‘qiladi.
+4. Netlify’da shu repository’ni ulang. `netlify.toml` faylidagi `/api/*` proksi qoidasida Render servisining ommaviy HTTPS manzili ko‘rsatilgan. Boshqa Render servisidan foydalansangiz, shu qoidaning manzilini yangilang.
 5. Supabase’da yangi bo‘sh baza tayyor bo‘lgach, mahalliy bazaning zaxira nusxasini yarating va PowerShell’da migratsiya skriptini ishga tushiring:
 
    ```powershell
@@ -55,4 +55,4 @@ Netlify faqat interfeysni joylaydi. Python API Render’da ishlaydi, PostgreSQL 
 
 Migratsiya faqat bo‘sh PostgreSQL bazasiga yozadi; mavjud bazani ustidan yozmaydi. Mahalliy `registry.db` fayli o‘zgarmaydi. Parollar va o‘quvchi ma’lumotlari mahalliy kompyuteringizdan Supabase’ga to‘g‘ridan-to‘g‘ri yuboriladi; connection string’ni GitLab’ga joylamang. Eski formatda talaba yozuvlari ichida saqlangan buzilishlar ham alohida jadvalga ko‘chiriladi. Ko‘chirishdan keyin foydalanuvchilar qayta tizimga kiradi.
 
-Render’da `ALLOWED_ORIGINS` qiymatini Netlify saytingizning aniq HTTPS origin’i bilan to‘ldiring. Netlify build jarayoni `RENDER_EXTERNAL_URL` orqali `/api/*` so‘rovlarini Render’ga proksi qiladi.
+Render’da `ALLOWED_ORIGINS` qiymatini Netlify saytingizning aniq HTTPS origin’i bilan to‘ldiring. Netlify `/api/*` so‘rovlarini `netlify.toml` dagi qoida orqali Render’ga proksi qiladi.
