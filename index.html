@@ -6,7 +6,7 @@
   <title>Реестр студентов</title>
   <style>
     :root { --navy:#102a43; --blue:#1769aa; --blue-pale:#edf5fb; --ink:#203344; --muted:#718096; --line:#e4eaf0; --canvas:#f4f7fa; --white:#fff; --green:#237a57; --danger:#b44141; --shadow:0 12px 32px rgba(16,42,67,.10); }
-    * { box-sizing:border-box; }
+    *, *::before, *::after { box-sizing:border-box; }
     body { margin:0;overflow-x:hidden;background:var(--canvas);color:var(--ink);font:14px/1.5 "Segoe UI",Arial,sans-serif; }
     img { max-width:100%; }
     main,section,article,form { min-width:0; }
@@ -221,10 +221,907 @@
   <div class="modal-backdrop" id="tutorStudentDetailsModal" hidden><section class="modal tutor-details-modal" role="dialog" aria-modal="true" aria-labelledby="tutorDetailsTitle"><div class="modal-header"><div><h2 id="tutorDetailsTitle">Карточка студента</h2><div class="modal-caption">История нарушений</div></div><button class="close-btn" id="closeTutorStudentDetails" type="button" aria-label="Закрыть">×</button></div><div class="tutor-student-profile" id="tutorStudentProfile"></div><div class="tutor-details-error" id="tutorDetailsError"></div><div class="tutor-history" id="tutorViolationHistory"></div></section></div>
   <div class="modal-backdrop" id="adminStudentDetailsModal" hidden><section class="modal tutor-details-modal" role="dialog" aria-modal="true" aria-labelledby="adminStudentDetailsTitle"><div class="modal-header"><div><h2 id="adminStudentDetailsTitle">Карточка студента</h2><div class="modal-caption">История всех нарушений</div></div><button class="close-btn" id="closeAdminStudentDetails" type="button" aria-label="Закрыть">×</button></div><div class="tutor-student-profile" id="adminStudentProfile"></div><div class="tutor-history" id="adminStudentViolations"></div></section></div>
 
-  <div class="modal-backdrop" id="structureModal" hidden><section class="modal small-modal"><div class="modal-header"><div><h2 id="structureTitle">Добавить факультет</h2><div class="modal-caption" id="structureCaption"></div></div><button class="close-btn" id="closeStructureModal" type="button">×</button></div><form id="structureForm"><div class="field"><label id="structureLabel" for="structureName">Название *</label><input id="structureName" maxlength="100" required></div><div class="form-error" id="structureError"></div><div class="modal-actions"><button class="secondary-btn" id="cancelStructureModal" type="button">Отмена</button><button class="primary-btn" type="submit">Сохранить</button></div></form></section></div>
+  <div class="modal-backdrop" id="structureModal" hidden>
+    <section class="modal small-modal">
+      <div class="modal-header">
+        <div><h2 id="structureTitle">Добавить факультет</h2><div class="modal-caption" id="structureCaption"></div></div>
+        <button class="close-btn" id="closeStructureModal" type="button">×</button>
+      </div>
+      <form id="structureForm">
+        <div class="field">
+          <label for="structureInput" id="structureLabel">Название *</label>
+          <input id="structureInput" maxlength="100" required>
+        </div>
+        <div class="form-error" id="structureError"></div>
+        <div class="modal-actions">
+          <button class="secondary-btn" id="cancelStructureModal" type="button">Отмена</button>
+          <button class="primary-btn" type="submit" id="saveStructure">Сохранить</button>
+        </div>
+      </form>
+    </section>
+  </div>
 
-  <div class="modal-backdrop" id="passwordModal" hidden><section class="modal small-modal"><div class="modal-header"><div><h2 id="passwordTitle">Изменить пароль</h2><div class="modal-caption">Пароль получит пользователь при следующем входе</div></div><button class="close-btn" id="closePasswordModal" type="button">×</button></div><form id="passwordForm"><div class="field"><label for="newPassword">Новый пароль *</label><input id="newPassword" type="password" minlength="8" required></div><div class="form-error" id="passwordError"></div><div class="modal-actions"><button class="secondary-btn" id="cancelPasswordModal" type="button">Отмена</button><button class="primary-btn" type="submit">Сохранить пароль</button></div></form></section></div>
+  <div class="modal-backdrop" id="passwordModal" hidden>
+    <section class="modal small-modal">
+      <div class="modal-header">
+        <div><h2>Сменить пароль</h2><div class="modal-caption" id="passwordUserCaption"></div></div>
+        <button class="close-btn" id="closePasswordModal" type="button">×</button>
+      </div>
+      <form id="passwordForm">
+        <div class="field">
+          <label for="newPasswordInput">Новый пароль (минимум 8 символов) *</label>
+          <input id="newPasswordInput" type="password" minlength="8" required>
+        </div>
+        <div class="form-error" id="passwordError"></div>
+        <div class="modal-actions">
+          <button class="secondary-btn" id="cancelPasswordModal" type="button">Отмена</button>
+          <button class="primary-btn" type="submit">Сохранить пароль</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="confirmModal" hidden>
+    <section class="modal small-modal">
+      <div class="modal-header">
+        <div><h2 id="confirmTitle">Подтверждение</h2><div class="modal-caption" id="confirmText"></div></div>
+        <button class="close-btn" id="closeConfirmModal" type="button">×</button>
+      </div>
+      <div style="padding:18px 24px 22px;">
+        <div class="modal-actions">
+          <button class="secondary-btn" id="cancelConfirmModal" type="button">Отмена</button>
+          <button class="primary-btn" id="okConfirmModal" type="button" style="background:var(--danger);">Удалить</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
   <div class="toast" id="toast" hidden></div>
-  <script src="/app.js"></script>
+
+  <script>
+    const STORAGE_KEY = "student_registry_state_v1";
+    const fundingLabels = { contract: "Контракт", "super-contract": "Супер-контракт", grant: "Грант" };
+    const roleLabels = { main: "Главный администратор", admin: "Администратор", tutor: "Тьютор", qalqon: "Qalqon", user: "Пользователь" };
+
+    const defaultState = {
+      currentUserId: null,
+      activeView: "studentsView",
+      authMode: "login",
+      theme: "light",
+      lang: "ru",
+      users: [
+        { id: "u-admin", fullName: "Администратор Системы", username: "admin", password: "Password123", role: "main", assignedGroups: [] },
+        { id: "u-tutor", fullName: "Каримов Азиз", username: "tutor1", password: "Password123", role: "tutor", assignedGroups: ["ИТ-101"] },
+        { id: "u-qalqon", fullName: "Наряд Qalqon", username: "qalqon1", password: "Password123", role: "qalqon", assignedGroups: [] }
+      ],
+      faculties: [
+        { id: "f-it", name: "Факультет информационных технологий", groups: ["ИТ-101", "ИТ-102"] },
+        { id: "f-eco", name: "Факультет экономики", groups: ["ЭК-201"] }
+      ],
+      students: [
+        { id: "s-1", firstName: "Алишер", lastName: "Рахимов", birthDate: "2005-04-12", gender: "Мужской", faculty: "Факультет информационных технологий", group: "ИТ-101", funding: "grant", photo: "" },
+        { id: "s-2", firstName: "Мадина", lastName: "Абдуллаева", birthDate: "2005-09-23", gender: "Женский", faculty: "Факультет информационных технологий", group: "ИТ-101", funding: "contract", photo: "" },
+        { id: "s-3", firstName: "Тимур", lastName: "Кадыров", birthDate: "2004-12-03", gender: "Мужской", faculty: "Факультет экономики", group: "ЭК-201", funding: "super-contract", photo: "" }
+      ],
+      violations: []
+    };
+
+    let state = loadState();
+    let editingStudentId = null;
+    let draftPhoto = "";
+    let editingViolationId = null;
+    let draftViolationFile = null;
+    let structureModalContext = null;
+    let passwordTargetUserId = null;
+    let confirmCallback = null;
+    let selectedTutorGroup = null;
+
+    const $ = (id) => document.getElementById(id);
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return structuredClone(defaultState);
+        const parsed = JSON.parse(raw);
+        return {
+          ...structuredClone(defaultState),
+          ...parsed,
+          users: Array.isArray(parsed.users) && parsed.users.length ? parsed.users : structuredClone(defaultState.users),
+          faculties: Array.isArray(parsed.faculties) ? parsed.faculties : structuredClone(defaultState.faculties),
+          students: Array.isArray(parsed.students) ? parsed.students : structuredClone(defaultState.students),
+          violations: Array.isArray(parsed.violations) ? parsed.violations : []
+        };
+      } catch {
+        return structuredClone(defaultState);
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function showToast(msg) {
+      const el = $("toast");
+      el.textContent = msg;
+      el.hidden = false;
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => { el.hidden = true; }, 2600);
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? "").replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+    }
+
+    function getCurrentUser() {
+      return state.users.find((u) => u.id === state.currentUserId) || null;
+    }
+
+    function applyThemeAndLang() {
+      document.documentElement.classList.toggle("theme-dark", state.theme === "dark");
+      $("themeToggle").textContent = state.theme === "dark" ? "☀" : "☾";
+      $("languageToggle").textContent = state.lang === "ru" ? "OʻZ" : "RU";
+    }
+
+    function renderAuth() {
+      const user = getCurrentUser();
+      if (user) {
+        $("authView").hidden = true;
+        $("appView").hidden = false;
+        renderApp();
+        return;
+      }
+      $("authView").hidden = false;
+      $("appView").hidden = true;
+      const isReg = state.authMode === "register";
+      document.querySelectorAll(".auth-tab").forEach((b) => b.classList.toggle("active", b.dataset.auth === state.authMode));
+      $("authTitle").textContent = isReg ? "Регистрация" : "Вход в реестр";
+      $("authSubtitle").textContent = isReg ? "Создайте учётную запись сотрудника" : "Используйте предоставленный логин и пароль";
+      $("fullNameField").hidden = !isReg;
+      $("accountTypeField").hidden = !isReg;
+      $("authFullName").required = isReg;
+      $("accountType").required = isReg;
+      $("authSubmit").textContent = isReg ? "Зарегистрироваться" : "Войти";
+      $("authError").textContent = "";
+      $("authNotice").hidden = true;
+    }
+
+    function switchView(viewId) {
+      state.activeView = viewId;
+      saveState();
+      document.querySelectorAll(".section-tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.view === viewId));
+      ["studentsView", "tutorView", "facultiesView", "usersView", "violationsView"].forEach((id) => {
+        $(id).hidden = id !== viewId;
+      });
+      if (viewId === "studentsView") renderStudents();
+      if (viewId === "tutorView") renderTutorView();
+      if (viewId === "facultiesView") renderFaculties();
+      if (viewId === "usersView") renderUsers();
+      if (viewId === "violationsView") renderViolations();
+    }
+
+    function renderApp() {
+      const user = getCurrentUser();
+      if (!user) return;
+      const isMain = user.role === "main";
+      const isTutor = user.role === "tutor";
+
+      $("currentUserName").textContent = user.fullName;
+      $("currentUserRole").textContent = roleLabels[user.role] || user.role;
+      $("currentUserInitial").textContent = (user.fullName || "У").trim().charAt(0).toUpperCase();
+
+      $("tutorTab").hidden = !isTutor && !isMain;
+      $("usersTab").hidden = !isMain;
+      $("addStudent").hidden = user.role === "qalqon";
+      $("addFaculty").hidden = user.role === "qalqon";
+
+      const allowedViews = ["studentsView", "facultiesView", "violationsView"];
+      if (isTutor || isMain) allowedViews.push("tutorView");
+      if (isMain) allowedViews.push("usersView");
+      if (!allowedViews.includes(state.activeView)) state.activeView = "studentsView";
+
+      switchView(state.activeView);
+    }
+
+    function renderStudents() {
+      const q = $("searchInput").value.trim().toLowerCase();
+      const funding = $("fundingFilter").value;
+
+      $("totalCount").textContent = state.students.length;
+      $("grantCount").textContent = state.students.filter((s) => s.funding === "grant").length;
+      $("contractCount").textContent = state.students.filter((s) => s.funding === "contract" || s.funding === "super-contract").length;
+
+      const filtered = state.students.filter((s) => {
+        const full = `${s.firstName} ${s.lastName} ${s.faculty} ${s.group}`.toLowerCase();
+        const matchQ = !q || full.includes(q);
+        const matchF = !funding || s.funding === funding;
+        return matchQ && matchF;
+      });
+
+      $("visibleCount").textContent = `${filtered.length} записей`;
+      $("emptyState").hidden = filtered.length > 0;
+      $("studentRows").innerHTML = filtered.map((s) => {
+        const initials = `${s.firstName?.[0] || ""}${s.lastName?.[0] || ""}`.toUpperCase() || "С";
+        const avatar = s.photo ? `<img src="${s.photo}" alt="">` : escapeHtml(initials);
+        const fClass = s.funding === "grant" ? "funding grant" : "funding";
+        return `
+          <tr>
+            <td>
+              <div class="person-cell">
+                <div class="person-photo">${avatar}</div>
+                <div>
+                  <span class="person-name">${escapeHtml(s.lastName)} ${escapeHtml(s.firstName)}</span>
+                  <span class="person-meta">${escapeHtml(s.gender || "")}</span>
+                </div>
+              </div>
+            </td>
+            <td>${escapeHtml(s.faculty)}</td>
+            <td>${escapeHtml(s.group)}</td>
+            <td><span class="${fClass}">${escapeHtml(fundingLabels[s.funding] || s.funding)}</span></td>
+            <td>${escapeHtml(s.birthDate || "")}</td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" type="button" title="Редактировать" onclick="openStudentModal('${s.id}')">✎</button>
+                <button class="icon-btn danger" type="button" title="Удалить" onclick="confirmDeleteStudent('${s.id}')">🗑</button>
+              </div>
+            </td>
+          </tr>`;
+      }).join("");
+    }
+
+    function populateFacultyAndGroupSelects(facultySelId, groupSelId, selectedFaculty = "", selectedGroup = "") {
+      const fSel = $(facultySelId);
+      const gSel = $(groupSelId);
+      fSel.innerHTML = `<option value="">Выберите факультет</option>` + state.faculties.map((f) => `<option value="${escapeHtml(f.name)}">${escapeHtml(f.name)}</option>`).join("");
+      if (selectedFaculty) fSel.value = selectedFaculty;
+
+      const facObj = state.faculties.find((f) => f.name === fSel.value);
+      const groups = facObj ? facObj.groups : [];
+      gSel.innerHTML = `<option value="">Выберите группу</option>` + groups.map((g) => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join("");
+      if (selectedGroup && groups.includes(selectedGroup)) gSel.value = selectedGroup;
+    }
+
+    function openStudentModal(studentId = null) {
+      editingStudentId = studentId;
+      $("studentError").textContent = "";
+      const st = studentId ? state.students.find((x) => x.id === studentId) : null;
+      $("studentModalTitle").textContent = st ? "Редактировать студента" : "Добавить студента";
+      $("firstName").value = st?.firstName || "";
+      $("lastName").value = st?.lastName || "";
+      $("birthDate").value = st?.birthDate || "";
+      $("gender").value = st?.gender || "";
+      $("fundingSelect").value = st?.funding || "";
+      draftPhoto = st?.photo || "";
+      $("photoPreview").innerHTML = draftPhoto ? `<img src="${draftPhoto}" alt="">` : "Фото";
+      populateFacultyAndGroupSelects("facultySelect", "groupSelect", st?.faculty || "", st?.group || "");
+      $("studentModal").hidden = false;
+    }
+
+    function confirmDeleteStudent(id) {
+      const st = state.students.find((x) => x.id === id);
+      if (!st) return;
+      openConfirm("Удалить студента?", `${st.lastName} ${st.firstName} будет удалён из реестра.`, () => {
+        state.students = state.students.filter((x) => x.id !== id);
+        saveState();
+        renderStudents();
+        showToast("Студент удалён");
+      });
+    }
+
+    function renderFaculties() {
+      const list = $("facultyList");
+      if (!state.faculties.length) {
+        list.innerHTML = `<div class="faculty-empty"><strong>Факультеты не добавлены</strong><div>Нажмите «+ Добавить факультет» для создания структуры.</div></div>`;
+        return;
+      }
+      list.innerHTML = state.faculties.map((f) => `
+        <article class="faculty-card">
+          <div class="faculty-head">
+            <div>
+              <div class="faculty-name">${escapeHtml(f.name)}</div>
+              <div class="faculty-count">Групп: ${f.groups.length}</div>
+            </div>
+            <div class="faculty-actions">
+              <button class="small-btn" type="button" onclick="openStructureModal('group', '${f.id}')">+ Группа</button>
+              <button class="small-btn" type="button" onclick="openStructureModal('renameFaculty', '${f.id}')">Переименовать</button>
+              <button class="small-btn danger" type="button" onclick="deleteFaculty('${f.id}')">Удалить</button>
+            </div>
+          </div>
+          <div class="group-list">
+            ${f.groups.length ? f.groups.map((g) => `
+              <span class="group-chip">
+                ${escapeHtml(g)}
+                <button class="icon-btn danger" type="button" title="Удалить группу" onclick="deleteGroup('${f.id}', '${escapeHtml(g)}')">×</button>
+              </span>
+            `).join("") : `<span class="privacy-note">Нет групп</span>`}
+          </div>
+        </article>`).join("");
+    }
+
+    function openStructureModal(mode, facultyId = null) {
+      structureModalContext = { mode, facultyId };
+      $("structureError").textContent = "";
+      $("structureInput").value = "";
+      if (mode === "faculty") {
+        $("structureTitle").textContent = "Добавить факультет";
+        $("structureCaption").textContent = "Укажите полное название факультета";
+        $("structureLabel").textContent = "Название факультета *";
+      } else if (mode === "renameFaculty") {
+        const fac = state.faculties.find((x) => x.id === facultyId);
+        $("structureTitle").textContent = "Переименовать факультет";
+        $("structureCaption").textContent = fac?.name || "";
+        $("structureLabel").textContent = "Новое название *";
+        $("structureInput").value = fac?.name || "";
+      } else if (mode === "group") {
+        const fac = state.faculties.find((x) => x.id === facultyId);
+        $("structureTitle").textContent = "Добавить группу";
+        $("structureCaption").textContent = fac?.name || "";
+        $("structureLabel").textContent = "Название группы *";
+      }
+      $("structureModal").hidden = false;
+      $("structureInput").focus();
+    }
+
+    function deleteFaculty(id) {
+      const fac = state.faculties.find((x) => x.id === id);
+      if (!fac) return;
+      openConfirm("Удалить факультет?", `Удалить «${fac.name}» и все связанные группы?`, () => {
+        state.faculties = state.faculties.filter((x) => x.id !== id);
+        saveState();
+        renderFaculties();
+        showToast("Факультет удалён");
+      });
+    }
+
+    function deleteGroup(facultyId, groupName) {
+      const fac = state.faculties.find((x) => x.id === facultyId);
+      if (!fac) return;
+      fac.groups = fac.groups.filter((g) => g !== groupName);
+      saveState();
+      renderFaculties();
+      showToast("Группа удалена");
+    }
+
+    function renderUsers() {
+      const allGroups = state.faculties.flatMap((f) => f.groups);
+      $("usersList").innerHTML = state.users.map((u) => {
+        const badgeClass = u.role === "main" ? "role-badge main" : u.role === "admin" ? "role-badge admin" : "role-badge";
+        const assigned = Array.isArray(u.assignedGroups) ? u.assignedGroups : [];
+        return `
+          <article class="user-card">
+            <div class="user-head">
+              <div>
+                <div class="user-name">${escapeHtml(u.fullName)} <span class="${badgeClass}">${escapeHtml(roleLabels[u.role] || u.role)}</span></div>
+                <div class="user-meta">Логин: ${escapeHtml(u.username)}</div>
+              </div>
+              <div class="user-actions">
+                <select class="filter-select" style="width:165px;min-height:33px;height:33px;" onchange="changeUserRole('${u.id}', this.value)">
+                  <option value="tutor" ${u.role === "tutor" ? "selected" : ""}>Тьютор</option>
+                  <option value="qalqon" ${u.role === "qalqon" ? "selected" : ""}>Qalqon</option>
+                  <option value="admin" ${u.role === "admin" ? "selected" : ""}>Администратор</option>
+                  <option value="main" ${u.role === "main" ? "selected" : ""}>Главный админ</option>
+                </select>
+                <button class="small-btn" type="button" onclick="openPasswordModal('${u.id}')">Пароль</button>
+                ${u.id !== state.currentUserId ? `<button class="small-btn danger" type="button" onclick="deleteUser('${u.id}')">Удалить</button>` : ""}
+              </div>
+            </div>
+            ${u.role === "tutor" ? `
+              <div class="group-assignment">
+                <strong>Закреплённые группы:</strong><br>
+                ${allGroups.length ? allGroups.map((g) => `
+                  <label>
+                    <input type="checkbox" ${assigned.includes(g) ? "checked" : ""} onchange="toggleTutorGroup('${u.id}', '${escapeHtml(g)}', this.checked)">
+                    ${escapeHtml(g)}
+                  </label>
+                `).join("") : `<span class="privacy-note">Сначала добавьте группы во вкладке «Факультеты и группы».</span>`}
+              </div>` : ""}
+          </article>`;
+      }).join("");
+    }
+
+    function changeUserRole(userId, newRole) {
+      const u = state.users.find((x) => x.id === userId);
+      if (!u) return;
+      u.role = newRole;
+      if (newRole === "tutor" && !Array.isArray(u.assignedGroups)) u.assignedGroups = [];
+      saveState();
+      renderUsers();
+      showToast("Роль обновлена");
+    }
+
+    function toggleTutorGroup(userId, groupName, checked) {
+      const u = state.users.find((x) => x.id === userId);
+      if (!u) return;
+      u.assignedGroups = Array.isArray(u.assignedGroups) ? u.assignedGroups : [];
+      if (checked && !u.assignedGroups.includes(groupName)) u.assignedGroups.push(groupName);
+      if (!checked) u.assignedGroups = u.assignedGroups.filter((g) => g !== groupName);
+      saveState();
+    }
+
+    function openPasswordModal(userId) {
+      const u = state.users.find((x) => x.id === userId);
+      if (!u) return;
+      passwordTargetUserId = userId;
+      $("passwordUserCaption").textContent = `${u.fullName} (${u.username})`;
+      $("newPasswordInput").value = "";
+      $("passwordError").textContent = "";
+      $("passwordModal").hidden = false;
+    }
+
+    function deleteUser(userId) {
+      const u = state.users.find((x) => x.id === userId);
+      if (!u) return;
+      openConfirm("Удалить пользователя?", `Удалить аккаунт «${u.username}»?`, () => {
+        state.users = state.users.filter((x) => x.id !== userId);
+        saveState();
+        renderUsers();
+        showToast("Пользователь удалён");
+      });
+    }
+
+    function renderTutorView() {
+      const user = getCurrentUser();
+      const allGroups = state.faculties.flatMap((f) => f.groups);
+      const groups = user?.role === "main" ? allGroups : (user?.assignedGroups || []);
+
+      if (selectedTutorGroup && groups.includes(selectedTutorGroup)) {
+        $("tutorGroupsPanel").hidden = true;
+        $("tutorGroupStudentsPanel").hidden = false;
+        $("tutorSelectedGroup").textContent = `Группа ${selectedTutorGroup}`;
+        const list = state.students.filter((s) => s.group === selectedTutorGroup);
+        $("tutorStudentEmpty").hidden = list.length > 0;
+        $("tutorStudentRows").innerHTML = list.map((s) => {
+          const vCount = state.violations.filter((v) => v.studentId === s.id).length;
+          const initials = `${s.firstName?.[0] || ""}${s.lastName?.[0] || ""}`.toUpperCase() || "С";
+          const avatar = s.photo ? `<img src="${s.photo}" alt="">` : escapeHtml(initials);
+          return `
+            <tr>
+              <td>
+                <button class="tutor-student-open" type="button" onclick="openStudentDetailsModal('${s.id}', 'tutor')">
+                  <div class="person-photo tutor-student-photo">${avatar}</div>
+                  <div>
+                    <span class="person-name">${escapeHtml(s.lastName)} ${escapeHtml(s.firstName)}</span>
+                    <span class="person-meta">${escapeHtml(s.faculty)}</span>
+                  </div>
+                </button>
+              </td>
+              <td><span class="violation-status ${vCount ? "has" : "none"}">${vCount ? `Нарушений: ${vCount}` : "Нарушений нет"}</span></td>
+            </tr>`;
+        }).join("");
+        return;
+      }
+
+      selectedTutorGroup = null;
+      $("tutorGroupsPanel").hidden = false;
+      $("tutorGroupStudentsPanel").hidden = true;
+      $("tutorGroupCards").innerHTML = groups.length ? groups.map((g) => {
+        const count = state.students.filter((s) => s.group === g).length;
+        return `
+          <button class="tutor-group-card" type="button" onclick="selectTutorGroup('${escapeHtml(g)}')">
+            <span class="tutor-group-name">${escapeHtml(g)}</span>
+            <span class="tutor-group-meta">Студентов: ${count}</span>
+          </button>`;
+      }).join("") : `<div class="faculty-empty"><strong>Нет закреплённых групп</strong><div>Обратитесь к главному администратору для назначения групп.</div></div>`;
+    }
+
+    function selectTutorGroup(groupName) {
+      selectedTutorGroup = groupName;
+      renderTutorView();
+    }
+
+    function openStudentDetailsModal(studentId, mode) {
+      const st = state.students.find((x) => x.id === studentId);
+      if (!st) return;
+      const list = state.violations.filter((v) => v.studentId === studentId);
+      const initials = `${st.firstName?.[0] || ""}${st.lastName?.[0] || ""}`.toUpperCase() || "С";
+      const avatar = st.photo ? `<img src="${st.photo}" alt="">` : escapeHtml(initials);
+      const profileHtml = `
+        <div class="person-photo tutor-profile-photo">${avatar}</div>
+        <div>
+          <div class="person-name">${escapeHtml(st.lastName)} ${escapeHtml(st.firstName)}</div>
+          <div class="person-meta">${escapeHtml(st.faculty)} · ${escapeHtml(st.group)}</div>
+        </div>`;
+      const historyHtml = list.length ? list.map((v) => `
+        <div class="violation-card">
+          <div class="violation-description">${escapeHtml(v.description)}</div>
+          <div class="violation-date">${escapeHtml(v.createdAt)} · ${escapeHtml(v.authorName || "")}</div>
+          ${v.fileName ? `<div class="violation-attachment">Вложение: ${escapeHtml(v.fileName)}</div>` : ""}
+        </div>`).join("") : `<div class="violation-empty">Нарушений не зафиксировано.</div>`;
+
+      if (mode === "tutor") {
+        $("tutorStudentProfile").innerHTML = profileHtml;
+        $("tutorViolationHistory").innerHTML = historyHtml;
+        $("tutorStudentDetailsModal").hidden = false;
+      } else {
+        $("adminStudentProfile").innerHTML = profileHtml;
+        $("adminStudentViolations").innerHTML = historyHtml;
+        $("adminStudentDetailsModal").hidden = false;
+      }
+    }
+
+    function syncViolationStudentSelect(facultyName, groupName, selectedId = "") {
+      const sel = $("violationStudent");
+      const matches = state.students.filter((s) => (!facultyName || s.faculty === facultyName) && (!groupName || s.group === groupName));
+      sel.innerHTML = `<option value="">Выберите студента</option>` + matches.map((s) => `<option value="${s.id}">${escapeHtml(s.lastName)} ${escapeHtml(s.firstName)} (${escapeHtml(s.group)})</option>`).join("");
+      if (selectedId && matches.some((s) => s.id === selectedId)) sel.value = selectedId;
+    }
+
+    function renderViolations() {
+      const user = getCurrentUser();
+      const isAdmin = user?.role === "main" || user?.role === "admin";
+      $("adminViolationStudents").hidden = !isAdmin;
+
+      if (!editingViolationId) {
+        populateFacultyAndGroupSelects("violationFaculty", "violationGroup");
+        syncViolationStudentSelect("", "");
+      }
+
+      if (isAdmin) {
+        const q = $("adminViolationSearch").value.trim().toLowerCase();
+        const studentsWithCounts = state.students.map((s) => ({
+          student: s,
+          count: state.violations.filter((v) => v.studentId === s.id).length
+        })).filter(({ student: s }) => !q || `${s.firstName} ${s.lastName} ${s.faculty} ${s.group}`.toLowerCase().includes(q));
+
+        $("adminViolationStudentCount").textContent = `${studentsWithCounts.length} студентов`;
+        $("adminViolationStudentsEmpty").hidden = studentsWithCounts.length > 0;
+        $("adminViolationStudentsList").innerHTML = studentsWithCounts.map(({ student: s, count }) => {
+          const badgeCls = count >= 4 ? "four" : count === 3 ? "three" : count === 2 ? "two" : "one";
+          return `
+            <button class="admin-violation-student" type="button" onclick="openStudentDetailsModal('${s.id}', 'admin')">
+              <span class="admin-violation-summary">
+                <span class="person-name">${escapeHtml(s.lastName)} ${escapeHtml(s.firstName)}</span>
+                <span class="person-meta">${escapeHtml(s.faculty)} · ${escapeHtml(s.group)}</span>
+              </span>
+              <span class="violation-count ${badgeCls}">${count}</span>
+            </button>`;
+        }).join("");
+      }
+
+      const listEl = $("violationsList");
+      if (!state.violations.length) {
+        listEl.innerHTML = `<div class="violation-empty">Записей о нарушениях пока нет.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = state.violations.map((v) => {
+        const st = state.students.find((s) => s.id === v.studentId);
+        const stLabel = st ? `${st.lastName} ${st.firstName} (${st.group})` : "Студент не указан";
+        return `
+          <article class="violation-card">
+            <div class="violation-card-head">
+              <div>
+                <strong>${escapeHtml(stLabel)}</strong>
+                <div class="violation-description">${escapeHtml(v.description)}</div>
+              </div>
+              <div class="row-actions">
+                <button class="small-btn" type="button" onclick="startEditViolation('${v.id}')">Изменить</button>
+                <button class="small-btn danger" type="button" onclick="deleteViolation('${v.id}')">Удалить</button>
+              </div>
+            </div>
+            <div class="violation-date">${escapeHtml(v.createdAt)} · ${escapeHtml(v.authorName || "")}</div>
+            ${v.fileName ? `<span class="violation-attachment">Файл: ${escapeHtml(v.fileName)}</span>` : ""}
+          </article>`;
+      }).join("");
+    }
+
+    function startEditViolation(id) {
+      const v = state.violations.find((x) => x.id === id);
+      if (!v) return;
+      editingViolationId = id;
+      const st = state.students.find((s) => s.id === v.studentId);
+      populateFacultyAndGroupSelects("violationFaculty", "violationGroup", st?.faculty || v.faculty || "", st?.group || v.group || "");
+      syncViolationStudentSelect($("violationFaculty").value, $("violationGroup").value, v.studentId);
+      $("violationDescription").value = v.description;
+      draftViolationFile = v.fileName ? { name: v.fileName } : null;
+      $("violationFileName").textContent = v.fileName ? `Прикреплён: ${v.fileName}` : "Файл не выбран (до 2 МБ)";
+      $("violationFormTitle").textContent = "Редактировать нарушение";
+      $("saveViolation").textContent = "Сохранить изменения";
+      $("cancelViolationEdit").hidden = false;
+      $("violationError").textContent = "";
+      $("violationForm").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function resetViolationForm() {
+      editingViolationId = null;
+      draftViolationFile = null;
+      $("violationForm").reset();
+      $("violationFileName").textContent = "Файл не выбран (до 2 МБ)";
+      $("violationFormTitle").textContent = "Сообщить о нарушении";
+      $("saveViolation").textContent = "Отправить нарушение";
+      $("cancelViolationEdit").hidden = true;
+      $("violationError").textContent = "";
+      populateFacultyAndGroupSelects("violationFaculty", "violationGroup");
+      syncViolationStudentSelect("", "");
+    }
+
+    function deleteViolation(id) {
+      openConfirm("Удалить запись?", "Удалить выбранное нарушение?", () => {
+        state.violations = state.violations.filter((x) => x.id !== id);
+        saveState();
+        renderViolations();
+        showToast("Запись удалена");
+      });
+    }
+
+    function openConfirm(title, text, onOk) {
+      $("confirmTitle").textContent = title;
+      $("confirmText").textContent = text;
+      confirmCallback = onOk;
+      $("confirmModal").hidden = false;
+    }
+
+    // События
+    $("languageToggle").addEventListener("click", () => {
+      state.lang = state.lang === "ru" ? "uz" : "ru";
+      saveState();
+      applyThemeAndLang();
+      showToast(state.lang === "uz" ? "Interfeys tili oʻzgartirildi (OʻZ)" : "Язык интерфейса: RU");
+    });
+
+    $("themeToggle").addEventListener("click", () => {
+      state.theme = state.theme === "dark" ? "light" : "dark";
+      saveState();
+      applyThemeAndLang();
+    });
+
+    document.querySelectorAll(".auth-tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.authMode = btn.dataset.auth;
+        renderAuth();
+      });
+    });
+
+    $("authForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      $("authError").textContent = "";
+      $("authNotice").hidden = true;
+      const username = $("authUsername").value.trim();
+      const password = $("authPassword").value;
+
+      if (state.authMode === "login") {
+        const user = state.users.find((u) => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
+        if (!user) {
+          $("authError").textContent = "Неверный логин или пароль.";
+          return;
+        }
+        state.currentUserId = user.id;
+        saveState();
+        renderAuth();
+        showToast(`Добро пожаловать, ${user.fullName}`);
+      } else {
+        const fullName = $("authFullName").value.trim();
+        const role = $("accountType").value;
+        if (!fullName || !role) {
+          $("authError").textContent = "Заполните ФИО и выберите роль.";
+          return;
+        }
+        if (state.users.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
+          $("authError").textContent = "Такой логин уже занят.";
+          return;
+        }
+        const newUser = {
+          id: "u-" + Date.now(),
+          fullName,
+          username,
+          password,
+          role,
+          assignedGroups: []
+        };
+        state.users.push(newUser);
+        state.currentUserId = newUser.id;
+        saveState();
+        renderAuth();
+        showToast("Аккаунт создан");
+      }
+    });
+
+    $("logoutBtn").addEventListener("click", () => {
+      state.currentUserId = null;
+      selectedTutorGroup = null;
+      saveState();
+      renderAuth();
+    });
+
+    $("sectionNav").addEventListener("click", (e) => {
+      const btn = e.target.closest(".section-tab");
+      if (!btn || btn.hidden) return;
+      switchView(btn.dataset.view);
+    });
+
+    $("addStudent").addEventListener("click", () => openStudentModal(null));
+    $("closeStudentModal").addEventListener("click", () => { $("studentModal").hidden = true; });
+    $("cancelStudentModal").addEventListener("click", () => { $("studentModal").hidden = true; });
+
+    $("facultySelect").addEventListener("change", () => {
+      populateFacultyAndGroupSelects("facultySelect", "groupSelect", $("facultySelect").value, "");
+    });
+
+    $("photoInput").addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        $("studentError").textContent = "Размер фото превышает 5 МБ.";
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        draftPhoto = String(reader.result || "");
+        $("photoPreview").innerHTML = `<img src="${draftPhoto}" alt="">`;
+        $("studentError").textContent = "";
+      };
+      reader.readAsDataURL(file);
+    });
+
+    $("studentForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const data = {
+        firstName: $("firstName").value.trim(),
+        lastName: $("lastName").value.trim(),
+        birthDate: $("birthDate").value,
+        gender: $("gender").value,
+        faculty: $("facultySelect").value,
+        group: $("groupSelect").value,
+        funding: $("fundingSelect").value,
+        photo: draftPhoto
+      };
+      if (!data.firstName || !data.lastName || !data.faculty || !data.group || !data.funding) {
+        $("studentError").textContent = "Заполните все обязательные поля.";
+        return;
+      }
+      if (editingStudentId) {
+        state.students = state.students.map((s) => s.id === editingStudentId ? { ...s, ...data } : s);
+        showToast("Данные студента обновлены");
+      } else {
+        state.students.push({ id: "s-" + Date.now(), ...data });
+        showToast("Студент добавлен");
+      }
+      saveState();
+      $("studentModal").hidden = true;
+      renderStudents();
+    });
+
+    $("searchInput").addEventListener("input", renderStudents);
+    $("fundingFilter").addEventListener("change", renderStudents);
+
+    $("addFaculty").addEventListener("click", () => openStructureModal("faculty"));
+    $("closeStructureModal").addEventListener("click", () => { $("structureModal").hidden = true; });
+    $("cancelStructureModal").addEventListener("click", () => { $("structureModal").hidden = true; });
+
+    $("structureForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const val = $("structureInput").value.trim();
+      if (!val || !structureModalContext) return;
+      const { mode, facultyId } = structureModalContext;
+
+      if (mode === "faculty") {
+        if (state.faculties.some((f) => f.name.toLowerCase() === val.toLowerCase())) {
+          $("structureError").textContent = "Такой факультет уже существует.";
+          return;
+        }
+        state.faculties.push({ id: "f-" + Date.now(), name: val, groups: [] });
+        showToast("Факультет добавлен");
+      } else if (mode === "renameFaculty") {
+        const fac = state.faculties.find((f) => f.id === facultyId);
+        if (fac) {
+          const oldName = fac.name;
+          fac.name = val;
+          state.students.forEach((s) => { if (s.faculty === oldName) s.faculty = val; });
+        }
+        showToast("Название обновлено");
+      } else if (mode === "group") {
+        const fac = state.faculties.find((f) => f.id === facultyId);
+        if (fac) {
+          if (fac.groups.includes(val)) {
+            $("structureError").textContent = "Такая группа уже есть на факультете.";
+            return;
+          }
+          fac.groups.push(val);
+        }
+        showToast("Группа добавлена");
+      }
+      saveState();
+      $("structureModal").hidden = true;
+      renderFaculties();
+    });
+
+    $("closePasswordModal").addEventListener("click", () => { $("passwordModal").hidden = true; });
+    $("cancelPasswordModal").addEventListener("click", () => { $("passwordModal").hidden = true; });
+    $("passwordForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const pwd = $("newPasswordInput").value;
+      if (pwd.length < 8) {
+        $("passwordError").textContent = "Пароль должен быть не короче 8 символов.";
+        return;
+      }
+      const u = state.users.find((x) => x.id === passwordTargetUserId);
+      if (u) u.password = pwd;
+      saveState();
+      $("passwordModal").hidden = true;
+      showToast("Пароль изменён");
+    });
+
+    $("closeConfirmModal").addEventListener("click", () => { $("confirmModal").hidden = true; });
+    $("cancelConfirmModal").addEventListener("click", () => { $("confirmModal").hidden = true; });
+    $("okConfirmModal").addEventListener("click", () => {
+      if (typeof confirmCallback === "function") confirmCallback();
+      confirmCallback = null;
+      $("confirmModal").hidden = true;
+    });
+
+    $("tutorBackToGroups").addEventListener("click", () => {
+      selectedTutorGroup = null;
+      renderTutorView();
+    });
+    $("closeTutorStudentDetails").addEventListener("click", () => { $("tutorStudentDetailsModal").hidden = true; });
+    $("closeAdminStudentDetails").addEventListener("click", () => { $("adminStudentDetailsModal").hidden = true; });
+
+    $("violationFaculty").addEventListener("change", () => {
+      populateFacultyAndGroupSelects("violationFaculty", "violationGroup", $("violationFaculty").value, "");
+      syncViolationStudentSelect($("violationFaculty").value, "");
+    });
+    $("violationGroup").addEventListener("change", () => {
+      syncViolationStudentSelect($("violationFaculty").value, $("violationGroup").value);
+    });
+    $("violationFile").addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      if (!file) {
+        draftViolationFile = null;
+        $("violationFileName").textContent = "Файл не выбран (до 2 МБ)";
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        $("violationError").textContent = "Файл слишком большой (максимум 2 МБ).";
+        return;
+      }
+      $("violationError").textContent = "";
+      draftViolationFile = { name: file.name };
+      $("violationFileName").textContent = `Выбран: ${file.name}`;
+    });
+
+    $("violationForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const studentId = $("violationStudent").value;
+      const description = $("violationDescription").value.trim();
+      if (!studentId || !description) {
+        $("violationError").textContent = "Выберите студента и укажите описание нарушения.";
+        return;
+      }
+      const user = getCurrentUser();
+      const nowStr = new Date().toLocaleString("ru-RU");
+
+      if (editingViolationId) {
+        state.violations = state.violations.map((v) => v.id === editingViolationId ? {
+          ...v,
+          studentId,
+          faculty: $("violationFaculty").value,
+          group: $("violationGroup").value,
+          description,
+          fileName: draftViolationFile ? draftViolationFile.name : v.fileName
+        } : v);
+        showToast("Нарушение обновлено");
+      } else {
+        state.violations.unshift({
+          id: "v-" + Date.now(),
+          studentId,
+          faculty: $("violationFaculty").value,
+          group: $("violationGroup").value,
+          description,
+          fileName: draftViolationFile?.name || "",
+          authorName: user?.fullName || "Система",
+          createdAt: nowStr
+        });
+        showToast("Нарушение зафиксировано");
+      }
+      saveState();
+      resetViolationForm();
+      renderViolations();
+    });
+
+    $("cancelViolationEdit").addEventListener("click", resetViolationForm);
+    $("adminViolationSearch").addEventListener("input", renderViolations);
+
+    applyThemeAndLang();
+    renderAuth();
+  </script>
 </body>
 </html>
